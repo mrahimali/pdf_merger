@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+
+        .content {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .file-input {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .file-input input[type="file"] {
+            display: block;
+            width: calc(100% - 30px);
+            padding: 10px;
+        }
+
+        .delete-btn {
+            width: 30px;
+            height: 30px;
+            margin-left: 10px;
+            background-color: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .content {
+                margin: 10px;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            button {
+                padding: 10px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="content" id="content">
+        <h1>Combine PDFs <br>
+        Created by - Rahim</h1>
+        <div id="fileInputsContainer">
+            <div class="file-input">
+                <input type="file" class="fileInput" accept="application/pdf">
+                <button class="delete-btn">X</button>
+            </div>
+        </div>
+        <button id="addFileInput">Add Another File</button>
+        <button id="download">Download Combined PDF</button>
+        <div class="footer">Created by Rahim</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script>
+        document.getElementById('addFileInput').addEventListener('click', function () {
+            const fileInputsContainer = document.getElementById('fileInputsContainer');
+            const newFileInput = document.createElement('div');
+            newFileInput.className = 'file-input';
+            newFileInput.innerHTML = '<input type="file" class="fileInput" accept="application/pdf"><button class="delete-btn">X</button>';
+            fileInputsContainer.appendChild(newFileInput);
+        });
+
+        document.getElementById('fileInputsContainer').addEventListener('click', function (event) {
+            if (event.target.classList.contains('delete-btn')) {
+                event.target.parentElement.remove();
+            }
+        });
+
+        document.getElementById('download').addEventListener('click', async function () {
+            const { PDFDocument } = PDFLib;
+            const combinedPdf = await PDFDocument.create();
+
+            const fileInputs = document.querySelectorAll('.fileInput');
+            const promises = [];
+
+            fileInputs.forEach(input => {
+                const files = input.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    promises.push(file.arrayBuffer());
+                }
+            });
+
+            const pdfBuffers = await Promise.all(promises);
+
+            for (const pdfBuffer of pdfBuffers) {
+                const pdf = await PDFDocument.load(pdfBuffer);
+                const copiedPages = await combinedPdf.copyPages(pdf, pdf.getPageIndices());
+                copiedPages.forEach((page) => {
+                    combinedPdf.addPage(page);
+                });
+            }
+
+            const combinedPdfBytes = await combinedPdf.save();
+            const blob = new Blob([combinedPdfBytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'combined.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+    </script>
+</body>
+</html>
